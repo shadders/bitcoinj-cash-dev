@@ -904,7 +904,7 @@ public class Script {
                 if (opcode == OP_VERIF || opcode == OP_VERNOTIF)
                     throw new ScriptException("Script included OP_VERIF or OP_VERNOTIF");
                 
-                if (opcode == OP_CAT || opcode == OP_SUBSTR || opcode == OP_LEFT || opcode == OP_RIGHT ||
+                if (opcode == OP_CAT || opcode == OP_SPLIT || opcode == OP_LEFT || opcode == OP_RIGHT ||
                     opcode == OP_INVERT || opcode == OP_AND || opcode == OP_OR || opcode == OP_XOR ||
                     opcode == OP_2MUL || opcode == OP_2DIV || opcode == OP_MUL || opcode == OP_DIV ||
                     opcode == OP_MOD || opcode == OP_LSHIFT || opcode == OP_RSHIFT)
@@ -1119,7 +1119,7 @@ public class Script {
                         stack.add(OPSWAPtmpChunk2);
                     break;
                 case OP_CAT:
-                case OP_SUBSTR:
+                case OP_SPLIT:
                 case OP_LEFT:
                 case OP_RIGHT:
                     throw new ScriptException("Attempted to use disabled Script Op.");
