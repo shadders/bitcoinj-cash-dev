@@ -86,7 +86,7 @@ public class ScriptOpCodes {
 
     // splice ops
     public static final int OP_CAT = 0x7e;
-    public static final int OP_SUBSTR = 0x7f;
+    public static final int OP_SPLIT = 0x7f;
     public static final int OP_LEFT = 0x80;
     public static final int OP_RIGHT = 0x81;
     public static final int OP_SIZE = 0x82;
@@ -214,7 +214,7 @@ public class ScriptOpCodes {
         .put(OP_SWAP, "SWAP")
         .put(OP_TUCK, "TUCK")
         .put(OP_CAT, "CAT")
-        .put(OP_SUBSTR, "SUBSTR")
+        .put(OP_SPLIT, "SPLIT")
         .put(OP_LEFT, "LEFT")
         .put(OP_RIGHT, "RIGHT")
         .put(OP_SIZE, "SIZE")
@@ -327,7 +327,7 @@ public class ScriptOpCodes {
         .put("SWAP", OP_SWAP)
         .put("TUCK", OP_TUCK)
         .put("CAT", OP_CAT)
-        .put("SUBSTR", OP_SUBSTR)
+        .put("SPLIT", OP_SPLIT)
         .put("LEFT", OP_LEFT)
         .put("RIGHT", OP_RIGHT)
         .put("SIZE", OP_SIZE)
