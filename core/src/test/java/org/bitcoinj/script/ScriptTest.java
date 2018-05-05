@@ -20,18 +20,18 @@ package org.bitcoinj.script;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import org.bitcoinj.core.*;
 import org.bitcoinj.core.Transaction.SigHash;
 import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.script.Script.VerifyFlag;
-import com.google.common.base.Charsets;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-
 import org.hamcrest.core.IsNot;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,11 +43,11 @@ import java.nio.charset.Charset;
 import java.util.*;
 
 import static org.bitcoinj.core.Utils.HEX;
+import static org.bitcoinj.script.Script.MAX_SCRIPT_ELEMENT_SIZE;
 import static org.bitcoinj.script.ScriptOpCodes.OP_0;
 import static org.bitcoinj.script.ScriptOpCodes.OP_INVALIDOPCODE;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.Assert.*;
-import org.junit.Before;
 
 public class ScriptTest {
     // From tx 05e04c26c12fe408a3c1b71aa7996403f6acad1045252b1c62e055496f4d2cb1 on the testnet.
@@ -248,38 +248,105 @@ public class ScriptTest {
             byte aorb  = (byte)(a[x] | b[x]);
             byte axorb = (byte)(a[x] ^ b[x]);
 
-            Assert.assertEquals(generateAndExecuteBitwiseScript(a[x], b[x], "AND"), aandb);
-            Assert.assertEquals(generateAndExecuteBitwiseScript(b[x], a[x], "AND"), aandb);
-            Assert.assertEquals(generateAndExecuteBitwiseScript(a[x], b[x], "OR"), aorb);
-            Assert.assertEquals(generateAndExecuteBitwiseScript(b[x], a[x], "OR"), aorb);
-            Assert.assertEquals(generateAndExecuteBitwiseScript(a[x], b[x], "XOR"), axorb);
-            Assert.assertEquals(generateAndExecuteBitwiseScript(b[x], a[x], "XOR"), axorb);
+            Assert.assertEquals(bitwiseScript(a[x], b[x], "AND"), aandb);
+            Assert.assertEquals(bitwiseScript(b[x], a[x], "AND"), aandb);
+            Assert.assertEquals(bitwiseScript(a[x], b[x], "OR"), aorb);
+            Assert.assertEquals(bitwiseScript(b[x], a[x], "OR"), aorb);
+            Assert.assertEquals(bitwiseScript(a[x], b[x], "XOR"), axorb);
+            Assert.assertEquals(bitwiseScript(b[x], a[x], "XOR"), axorb);
         }
     }
 
     @Test
     public void testBitwiseOpcodes() {
         for (int x = 0; x < ScriptTestBitwiseData.a.length ; x++) {
-            byte a = (byte) ScriptTestBitwiseData.a[x];
-            byte b = (byte) ScriptTestBitwiseData.b[x];
+            byte a = ScriptTestBitwiseData.a[x];
+            byte b = ScriptTestBitwiseData.b[x];
             byte expected_xor = (byte)(a^b);
 
-            Assert.assertEquals(generateAndExecuteBitwiseScript(a, b, "AND"), (byte)ScriptTestBitwiseData.aandb[x]);
-            Assert.assertEquals(generateAndExecuteBitwiseScript(b, a, "AND"), (byte)ScriptTestBitwiseData.aandb[x]);
-            Assert.assertEquals(generateAndExecuteBitwiseScript(a, b, "OR"), (byte)ScriptTestBitwiseData.aorb[x]);
-            Assert.assertEquals(generateAndExecuteBitwiseScript(b, a, "OR"), (byte)ScriptTestBitwiseData.aorb[x]);
-            Assert.assertEquals(generateAndExecuteBitwiseScript(a, b, "XOR"), expected_xor);
-            Assert.assertEquals(generateAndExecuteBitwiseScript(b, a, "XOR"), expected_xor);
+            Assert.assertEquals(bitwiseScript(a, b, "AND"), ScriptTestBitwiseData.aandb[x]);
+            Assert.assertEquals(bitwiseScript(b, a, "AND"), ScriptTestBitwiseData.aandb[x]);
+            Assert.assertEquals(bitwiseScript(a, b, "OR"),  ScriptTestBitwiseData.aorb[x]);
+            Assert.assertEquals(bitwiseScript(b, a, "OR"),  ScriptTestBitwiseData.aorb[x]);
+            Assert.assertEquals(bitwiseScript(a, b, "XOR"), expected_xor);
+            Assert.assertEquals(bitwiseScript(b, a, "XOR"), expected_xor);
         }
     }
 
-    private byte generateAndExecuteBitwiseScript(byte a, byte b, String opcode) {
-        byte[] result = generateAndExecuteBitwiseScript(new byte[]{a}, new byte[]{b}, opcode);
+    @Test
+    public void testOpCat() {
+        final byte[] EMPTY = {};
+        final byte[] A = {'a'};
+        final byte[] A_B = {'a', 'b'};
+        final byte[] ZEROS_1 = {0x00};
+        final byte[] ZEROS_2 = {0x00, 0x00};
+        final byte[] ZEROS_4 = {0x00, 0x00, 0x00, 0x00};
+
+        Assert.assertArrayEquals(bitwiseScript(EMPTY, EMPTY, "CAT"), EMPTY);
+        Assert.assertArrayEquals(bitwiseScript(ZEROS_1, ZEROS_1, "CAT"), ZEROS_2);
+        Assert.assertArrayEquals(bitwiseScript(ZEROS_2, ZEROS_2, "CAT"), ZEROS_4);
+
+        Assert.assertArrayEquals(bitwiseScript(A, EMPTY, "CAT"), A);
+        Assert.assertArrayEquals(bitwiseScript(A_B, EMPTY, "CAT"), A_B);
+        Assert.assertArrayEquals(bitwiseScript(ZEROS_1, EMPTY, "CAT"), ZEROS_1);
+        Assert.assertArrayEquals(bitwiseScript(ZEROS_2, EMPTY, "CAT"), ZEROS_2);
+        Assert.assertArrayEquals(bitwiseScript(ZEROS_4, EMPTY, "CAT"), ZEROS_4);
+
+        Assert.assertArrayEquals(bitwiseScript(EMPTY, A, "CAT"), A);
+        Assert.assertArrayEquals(bitwiseScript(EMPTY, A_B, "CAT"), A_B);
+        Assert.assertArrayEquals(bitwiseScript(EMPTY, ZEROS_1, "CAT"), ZEROS_1);
+        Assert.assertArrayEquals(bitwiseScript(EMPTY, ZEROS_2, "CAT"), ZEROS_2);
+        Assert.assertArrayEquals(bitwiseScript(EMPTY, ZEROS_4, "CAT"), ZEROS_4);
+
+        Assert.assertArrayEquals(bitwiseScript(A_B, new byte[]{'c', 'd'}, "CAT"), new byte[]{'a', 'b', 'c', 'd'});
+
+
+        for (int x = 0; x < MAX_SCRIPT_ELEMENT_SIZE ; x++) {
+            int firstSize = x;
+            int secondSize = (int)MAX_SCRIPT_ELEMENT_SIZE - x;
+            byte[] first = new byte[firstSize];
+            byte[] second = new byte[secondSize];
+            byte[] cat = new byte[(int)MAX_SCRIPT_ELEMENT_SIZE];
+            System.arraycopy(ScriptTestBitwiseData.a, 0, first, 0, firstSize);
+            System.arraycopy(ScriptTestBitwiseData.b, 0, second, 0, secondSize);
+
+            System.arraycopy(ScriptTestBitwiseData.a, 0, cat, 0, firstSize);
+            System.arraycopy(ScriptTestBitwiseData.b, 0, cat, firstSize, secondSize);
+
+            Assert.assertArrayEquals(bitwiseScript(first, second, "CAT"), cat);
+
+            if (firstSize != 0 && secondSize != 0) {
+                // Try overflow
+                byte[] secondOverflow = new byte[secondSize + 1];
+                System.arraycopy(ScriptTestBitwiseData.a, 0, secondOverflow, 0, secondSize + 1);
+
+                try {
+                    Assert.assertArrayEquals(bitwiseScript(first, secondOverflow, "CAT"), cat);
+                    fail("CAT should fail when result is more than " + MAX_SCRIPT_ELEMENT_SIZE);
+                } catch (ScriptException e) {
+                    Assert.assertEquals("Push value size limit exceeded.", e.getMessage());
+                }
+            }
+
+        }
+
+    }
+
+    private byte bitwiseScript(byte a, byte b, String opcode) {
+        byte[] result = bitwiseScript(new byte[]{a}, new byte[]{b}, opcode);
         return result[0];
     }
 
-    private byte[] generateAndExecuteBitwiseScript(byte[] a, byte[] b, String opcode) {
-        Script script = new ScriptBuilder().data(a).data(b).op(ScriptOpCodes.getOpCode(opcode)).build();
+    private byte[] bitwiseScript(byte[] a, byte[] b, String opcode) {
+        ScriptBuilder builder = new ScriptBuilder();
+        if (a != null) {
+            builder.data(a);
+        }
+        if (b != null) {
+            builder.data(b);
+        }
+        builder.op(ScriptOpCodes.getOpCode(opcode)).build();
+        Script script = builder.build();
         LinkedList<byte[]> stack = new LinkedList<>();
         EnumSet<VerifyFlag> verifyFlags = EnumSet.noneOf(VerifyFlag.class);
         verifyFlags.add(VerifyFlag.MONOLITH_OPCODES);
@@ -348,7 +415,7 @@ public class ScriptTest {
             Set<VerifyFlag> verifyFlags = parseVerifyFlags(test.get(2).asText());
             try {
                 scriptSig.correctlySpends(new Transaction(PARAMS), 0, scriptPubKey, verifyFlags);
-            } catch (ScriptException e) {
+            } catch (Exception e) {
                 System.err.println(test);
                 System.err.flush();
                 throw e;
@@ -371,6 +438,10 @@ public class ScriptTest {
                 fail();
             } catch (VerificationException e) {
                 // Expected.
+            } catch (Exception e) {
+                System.err.println(test);
+                System.err.flush();
+                throw e;
             }
         }
     }
