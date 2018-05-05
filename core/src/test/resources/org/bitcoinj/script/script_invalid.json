@@ -130,10 +130,10 @@
 
 ["'a' 'b'", "CAT", "P2SH,STRICTENC", "CAT disabled"],
 ["'a' 'b' 0", "IF CAT ELSE 1 ENDIF", "P2SH,STRICTENC", "CAT disabled"],
-["'abc' 1 1", "SUBSTR", "P2SH,STRICTENC", "SUBSTR disabled"],
-["'abc' 1 1 0", "IF SUBSTR ELSE 1 ENDIF", "P2SH,STRICTENC", "SUBSTR disabled"],
-["'abc' 2 0", "IF LEFT ELSE 1 ENDIF", "P2SH,STRICTENC", "LEFT disabled"],
-["'abc' 2 0", "IF RIGHT ELSE 1 ENDIF", "P2SH,STRICTENC", "RIGHT disabled"],
+["'abc' 1 1", "SPLIT", "P2SH,STRICTENC", "SPLIT disabled"],
+["'abc' 1 1 0", "IF SPLIT ELSE 1 ENDIF", "P2SH,STRICTENC", "SPLIT disabled"],
+["'abc' 2 0", "IF NUM2BIN ELSE 1 ENDIF", "P2SH,STRICTENC", "NUM2BIN disabled"],
+["'abc' 2 0", "IF BIN2NUM ELSE 1 ENDIF", "P2SH,STRICTENC", "BIN2NUM disabled"],
 
 ["NOP", "SIZE 1", "P2SH,STRICTENC"],
 
@@ -156,6 +156,7 @@
 ["2147483648 0 ADD", "NOP", "P2SH,STRICTENC", "arithmetic operands must be in range [-2^31...2^31] "],
 ["-2147483648 0 ADD", "NOP", "P2SH,STRICTENC", "arithmetic operands must be in range [-2^31...2^31] "],
 ["2147483647 DUP ADD", "4294967294 NUMEQUAL", "P2SH,STRICTENC", "NUMEQUAL must be in numeric range"],
+
 ["'abcdef' NOT", "0 EQUAL", "P2SH,STRICTENC", "NOT is an arithmetic operand"],
 
 ["2 DUP MUL", "4 EQUAL", "P2SH,STRICTENC", "disabled"],
@@ -388,5 +389,17 @@
 ["0 0x01 0x50", "HASH160 0x14 0xece424a6bb6ddf4db592c0faed60685047a361b1 EQUAL", "P2SH,STRICTENC", "OP_RESERVED in P2SH should fail"],
 ["0 0x01 VER", "HASH160 0x14 0x0f4d7845db968f2a81b530b6f3c1d6246d4c7e01 EQUAL", "P2SH,STRICTENC", "OP_VER in P2SH should fail"],
 
-["0x00", "'00' EQUAL", "P2SH,STRICTENC", "Basic OP_0 execution"]
+["0x00", "'00' EQUAL", "P2SH,STRICTENC", "Basic OP_0 execution"],
+
+
+["", "BIN2NUM 0 EQUAL", "P2SH,STRICTENC,MONOLITH_OPCODES", "INVALID_STACK_OPERATION", "BIN2NUM, empty stack"],
+["0x05 0xffffffff00", "BIN2NUM 2147483647 EQUAL", "P2SH,STRICTENC,MONOLITH_OPCODES", "INVALID_NUMBER_RANGE", "BIN2NUM, oversized arguement"],
+
+["", "NUM2BIN 0 EQUAL", "P2SH,STRICTENC,MONOLITH_OPCODES", "INVALID_STACK_OPERATION", "NUM2BIN, empty stack"],
+["0", "NUM2BIN 0 EQUAL", "P2SH,STRICTENC,MONOLITH_OPCODES", "INVALID_STACK_OPERATION", "NUM2BIN, one parameter"],
+["-42 521", "NUM2BIN", "P2SH,STRICTENC,MONOLITH_OPCODES", "PUSH_SIZE", "Pushing 521 bytes is not"],
+["-42 -3", "NUM2BIN", "P2SH,STRICTENC,MONOLITH_OPCODES", "PUSH_SIZE", "Negative size"]
+
+
+
 ]
