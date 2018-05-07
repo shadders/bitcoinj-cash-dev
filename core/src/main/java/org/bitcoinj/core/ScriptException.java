@@ -19,11 +19,22 @@ package org.bitcoinj.core;
 @SuppressWarnings("serial")
 public class ScriptException extends VerificationException {
 
+    private String errorCode = "UNKNOWN_ERROR";
+
+    public ScriptException(String msg, String errorCode) {
+        super(msg);
+        this.errorCode = errorCode;
+    }
+
     public ScriptException(String msg) {
         super(msg);
     }
 
     public ScriptException(String msg, Exception e) {
         super(msg, e);
+    }
+
+    public String getErrorCode() {
+        return errorCode;
     }
 }
