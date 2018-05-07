@@ -329,7 +329,26 @@ public class ScriptTest {
             }
 
         }
+    }
 
+    @Test
+    public void testOpSplit() {
+        final byte[] EMPTY = {};
+        final byte[] A = {'a'};
+        final byte[] B = {'b'};
+        final byte[] A_B = {'a', 'b'};
+
+        Assert.assertArrayEquals(EMPTY, executeMonolithScript(new ScriptBuilder().data(EMPTY).number(0).op(ScriptOpCodes.OP_SPLIT).build()));
+
+        Assert.assertArrayEquals(A, executeMonolithScript(new ScriptBuilder().data(A).number(0).op(ScriptOpCodes.OP_SPLIT).build()));
+        Assert.assertArrayEquals(EMPTY, executeMonolithScript(new ScriptBuilder().data(A).number(A.length).op(ScriptOpCodes.OP_SPLIT).build()));
+
+        Assert.assertArrayEquals(A_B, executeMonolithScript(new ScriptBuilder().data(A_B).number(0).op(ScriptOpCodes.OP_SPLIT).build()));
+        Assert.assertArrayEquals(B, executeMonolithScript(new ScriptBuilder().data(A_B).number(1).op(ScriptOpCodes.OP_SPLIT).build()));
+        Assert.assertArrayEquals(EMPTY, executeMonolithScript(new ScriptBuilder().data(A_B).number(2).op(ScriptOpCodes.OP_SPLIT).build()));
+
+        executeFailedMonolithScript(new ScriptBuilder().op(ScriptOpCodes.OP_SPLIT).build(), "Invalid stack operation.");
+        executeFailedMonolithScript(new ScriptBuilder().data(EMPTY).number(1).op(ScriptOpCodes.OP_SPLIT).build(), "Invalid OP_SPLIT range.");
     }
 
     private byte bitwiseScript(byte a, byte b, String opcode) {
@@ -345,13 +364,23 @@ public class ScriptTest {
         if (b != null) {
             builder.data(b);
         }
-        builder.op(ScriptOpCodes.getOpCode(opcode)).build();
-        Script script = builder.build();
+        builder.op(ScriptOpCodes.getOpCode(opcode));
+        return executeMonolithScript(builder.build());
+    }
+
+    private void executeFailedMonolithScript(Script script, String message) {
+        try {
+            executeMonolithScript(script);
+            fail("Script should fails with '"+message+"'");
+        } catch (ScriptException e) {
+            Assert.assertEquals(message, e.getMessage());
+        }
+    }
+    private byte[] executeMonolithScript(Script script) {
         LinkedList<byte[]> stack = new LinkedList<>();
         EnumSet<VerifyFlag> verifyFlags = EnumSet.noneOf(VerifyFlag.class);
         verifyFlags.add(VerifyFlag.MONOLITH_OPCODES);
         Script.executeScript(new Transaction(PARAMS), 0, script, stack, Coin.ZERO, verifyFlags);
-        Assert.assertEquals("Stack size must be 1", stack.size(), 1);
         return stack.peekLast();
     }
 
