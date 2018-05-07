@@ -43,6 +43,7 @@ import java.nio.charset.Charset;
 import java.util.*;
 
 import static org.bitcoinj.core.Utils.HEX;
+import static org.bitcoinj.core.Utils.toByteArray;
 import static org.bitcoinj.script.Script.MAX_SCRIPT_ELEMENT_SIZE;
 import static org.bitcoinj.script.ScriptOpCodes.OP_0;
 import static org.bitcoinj.script.ScriptOpCodes.OP_INVALIDOPCODE;
@@ -331,6 +332,41 @@ public class ScriptTest {
         }
     }
 
+    private void assertBin2NumThenNum2Bin(byte[] value, byte[] expected) {
+        // known values
+        Assert.assertArrayEquals(value, executeMonolithScript(new ScriptBuilder().data(expected).op(ScriptOpCodes.OP_BIN2NUM).build()));
+        Assert.assertArrayEquals(expected, executeMonolithScript(new ScriptBuilder().data(value).data(new byte[]{(byte)expected.length}).op(ScriptOpCodes.OP_NUM2BIN).build()));
+    }
+    @Test
+    public void testBin2Num() {
+        // known values
+        assertBin2NumThenNum2Bin(toByteArray(0xab, 0xcd, 0xef, 0x00), toByteArray(0xab, 0xcd, 0xef, 0x00));
+        assertBin2NumThenNum2Bin(toByteArray(0xab, 0xcd, 0x7f), toByteArray(0xab, 0xcd, 0x7f, 0x00));
+
+        // reductions
+        assertBin2NumThenNum2Bin(toByteArray(0xab, 0xcd, 0xef, 0xc2), toByteArray(0xab, 0xcd, 0xef, 0x42, 0x80));
+        assertBin2NumThenNum2Bin(toByteArray(0xab, 0xcd, 0x7f, 0x42), toByteArray(0xab, 0xcd, 0x7f, 0x42, 0x00));
+
+        // Empty stack
+        executeFailedMonolithScript(new ScriptBuilder().op(ScriptOpCodes.OP_BIN2NUM).build(), "Invalid stack operation.");
+        executeFailedMonolithScript(new ScriptBuilder().op(ScriptOpCodes.OP_NUM2BIN).build(), "Invalid stack operation.");
+
+        // Values that do not fit in 4 bytes are considered out of range for BIN2NUM
+        executeFailedMonolithScript(new ScriptBuilder().data(toByteArray(0xab, 0xcd, 0xef, 0xc2, 0x80)).op(ScriptOpCodes.OP_BIN2NUM).build(), "Given operand is not a number within the valid range [-2^31...2^31]");
+        executeFailedMonolithScript(new ScriptBuilder().data(toByteArray(0x00, 0x00, 0x00, 0x80, 0x80)).op(ScriptOpCodes.OP_BIN2NUM).build(), "Given operand is not a number within the valid range [-2^31...2^31]");
+
+        // NUM2BIN require 2 elements on the stack.
+        executeFailedMonolithScript(new ScriptBuilder().data(toByteArray( 0x00)).op(ScriptOpCodes.OP_NUM2BIN).build(), "Invalid stack operation.");
+
+        executeFailedMonolithScript(new ScriptBuilder().data(new byte[0]).data(toByteArray(0x09, 0x02)).op(ScriptOpCodes.OP_NUM2BIN).build(), "Push value size limit exceeded.");
+
+        // Check that the requested encoding is possible.
+        executeFailedMonolithScript(new ScriptBuilder().data(toByteArray(0xab, 0xcd, 0xef, 0x80)).data(toByteArray(0x03)).op(ScriptOpCodes.OP_NUM2BIN).build(), "The requested encoding is impossible to satisfy.");
+
+
+
+    }
+    
     @Test
     public void testOpSplit() {
         final byte[] EMPTY = {};
